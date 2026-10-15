@@ -1,0 +1,84 @@
+const express = require("express");
+const Joi = require("joi");
+
+const app = express();
+app.use(express.json());
+
+let books = [
+  { id: 1, title: "Harry Potter" },
+  { id: 2, title: "Twilight" },
+  { id: 3, title: "Lorien Legacies" }
+];
+
+const bookSchema = Joi.object({
+  title: Joi.string().trim().min(1).required()
+});
+
+app.get("/", (req, res) => {
+  res.send("REST APIs are so much fun");
+});
+
+// Get all books
+app.get("/api/books", (req, res) => {
+  res.json(books);
+});
+
+// Get one book by ID
+app.get("/api/books/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const book = books.find(b => b.id === id);
+
+  if (!book) {
+    return res.status(404).json({ error: "Book not found" });
+  }
+  res.json(book);
+});
+
+// Add a book
+app.post("/api/books", (req, res) => {
+  const { error, value } = bookSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  const nextId = books.length ? Math.max(...books.map(b => b.id)) + 1 : 1;
+  const book = { id: nextId, title: value.title };
+  books.push(book);
+  res.status(201).json(book);
+});
+
+// Update a book
+app.put("/api/books/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const book = books.find(b => b.id === id);
+
+  if (!book) {
+    return res.status(404).json({ error: "Book not found" });
+  }
+
+  const { error, value } = bookSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  book.title = value.title;
+  res.json(book);
+});
+
+// Delete a book
+app.delete("/api/books/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const index = books.findIndex(b => b.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: "Book not found" });
+  }
+
+  const deletedBook = books.splice(index, 1)[0];
+  res.json({ message: "Book deleted successfully", book: deletedBook });
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+  console.log(`REST API server listening on http://localhost:${port}`);
+});
